@@ -73,18 +73,25 @@ void handleErrors(void)
 }
 
 
-EVP_CIPHER_CTX setupAES(unsigned char key[16]) {
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
-
+//EVP_CIPHER_CTX setupAES(unsigned char key[16]) {
+void setupAES(unsigned char key[16], EVP_CIPHER_CTX *ctx){
+	/* celine: modif compatibilité OpenSSL1.1.0*/
+	//EVP_CIPHER_CTX ctx;
+	//EVP_CIPHER_CTX_init(&ctx);
+	EVP_CIPHER_CTX_reset(ctx);
+	/*celine: fin modif*/
 
 	/* A 128 bit IV */
 	unsigned char *iv = (unsigned char *)"01234567890123456";
 
-	if(1 != EVP_EncryptInit_ex(&ctx, EVP_aes_128_ctr(), NULL, key, iv))
+	/*celine: modif compatibilite*/
+	//if(1 != EVP_EncryptInit_ex(&ctx, EVP_aes_128_ctr(), NULL, key, iv))
+	//	handleErrors();
+        if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, key, iv))
 		handleErrors();
 
-	return ctx;
+	//return ctx;
+	/*celine: fin modif*/
 
 
 }
@@ -93,17 +100,30 @@ void getAllRandomness(unsigned char key[16], unsigned char randomness[2912]) {
 	//Generate randomness: We use 728*32 bit of randomness per key.
 	//Since AES block size is 128 bit, we need to run 728*32/128 = 182 iterations
 
-	EVP_CIPHER_CTX ctx;
-	ctx = setupAES(key);
+	/*celine: modif compatibilité*/
+	//EVP_CIPHER_CTX ctx;
+	//ctx = setupAES(key);
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+	setupAES(key, ctx);
+	/*celine: fin modif*/
+
 	unsigned char *plaintext =
 			(unsigned char *)"0000000000000000";
 	int len;
-	for(int j=0;j<182;j++) {
-		if(1 != EVP_EncryptUpdate(&ctx, &randomness[j*16], &len, plaintext, strlen ((char *)plaintext)))
+	
+	/*celine: modif compatibilité*/
+	//for(int j=0;j<182;j++) {
+	//	if(1 != EVP_EncryptUpdate(&ctx, &randomness[j*16], &len, plaintext, strlen ((char *)plaintext)))
+	//		handleErrors();
+	//}
+	//EVP_CIPHER_CTX_cleanup(&ctx);
+	//
+	for(int j=0;j<182;j++){
+		if(1!= EVP_EncryptUpdate(ctx, &randomness[j*16], &len, plaintext, strlen ((char*)plaintext)))
 			handleErrors();
-
 	}
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_reset(ctx);
+	/*celine: fin modif*/
 }
 
 uint32_t getRandom32(unsigned char randomness[2912], int randCount) {
